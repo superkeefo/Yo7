@@ -3,6 +3,8 @@ A simple tool that while running sends all cmdr chat to a discord webhook
 allowing you to get discord notifications, 
 so you dont accidentally ignore real people like you do npcs...
 
+You'll need a discord server so you can set up a webhook in a channel to revceive the incoming chat.
+
 ![Ui1](https://github.com/user-attachments/assets/3241684e-4e2a-470e-89fe-3fb6610c5267)
 
 Truth be told i'm not a coder and 'vibe coded' this with ai.
