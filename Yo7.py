@@ -62,6 +62,7 @@ class LogFileMonitor(FileSystemEventHandler):
                 self.last_position = 0
                 self.process_new_lines()
 
+    channel_swap = {"player": "DM", "starsystem": "SYSTEM", "local": "LOCAL", "wing": "WING", "voicechat": "VC", "squadron": "SQUAD"}
     def process_new_lines(self):
         if not self.latest_log_file or not os.path.exists(self.latest_log_file) or not self.app.scanning:
             return
@@ -84,18 +85,8 @@ class LogFileMonitor(FileSystemEventHandler):
                                     message = log_entry.get("Message", "Unknown")
                                     if from_cmdr.startswith("$") or message.startswith("$"):
                                         continue
-                                    if channel == "player":
-                                        channel = "DM"
-                                    if channel == "starsystem":
-                                        channel = "SYSTEM"
-                                    if channel == "local":
-                                        channel = "LOCAL"
-                                    if channel == "wing":
-                                        channel = "WING"
-                                    if channel == "voicechat":
-                                        channel = "VC"
-                                    if channel == "squadron":
-                                        channel = "SQUAD"
+                                    if channel in channel_swap.keys():
+                                        channel == channel_swap[channel]
                                     formatted_message = f"{channel} {from_cmdr}: {message}"
                                     send_to_discord(self.app.webhook_url.get(), formatted_message)
                         except json.JSONDecodeError as e:
