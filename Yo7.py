@@ -117,6 +117,7 @@ class LogMonitorApp:
         tk.Button(root, text="Browse", command=self.browse_folder).pack()
         tk.Label(root, text="Discord Webhook URL:").pack()
         tk.Entry(root, textvariable=self.webhook_url, width=50).pack()
+        tk.Button(root, text="Send test/example message", command=lambda: self.test_webhook()).pack()
         tk.Button(root, text="Start Scan", command=self.start_scan).pack()
         tk.Button(root, text="Stop Scan", command=self.stop_scan).pack()
         self.status_label = tk.Label(root, text="Scanner Off", fg="red")
@@ -148,6 +149,16 @@ class LogMonitorApp:
         self.observer = Observer()
         self.observer.schedule(self.event_handler, path=self.folder_path.get(), recursive=False)
         self.observer.start()
+
+    def test_webhook(self):
+        webhook_url = self.webhook_url.get()
+        """Sends a test message to the webhook."""
+        if not webhook_url:
+            messagebox.showerror("Error", "Please enter a webhook URL!")
+            return
+        payload = {"username": "Just a test.", "content": f"via Yo7: Message contents go here."}
+        send_to_discord(webhook_url, payload)
+        messagebox.showinfo("Success", "Test message sent.")
     
     def set_latest_log_file(self, log_file):
         self.latest_log_file = log_file
