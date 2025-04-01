@@ -31,10 +31,10 @@ def find_latest_log_file(folder_path):
         print(f"Error finding latest log file: {e}")
     return None
 
-def send_to_discord(webhook_url, message):
+def send_to_discord(webhook_url, payload):
     if webhook_url:
         try:
-            requests.post(webhook_url, json={"content": message})
+            requests.post(webhook_url, json=payload)
         except Exception as e:
             print(f"Error sending to Discord: {e}")
 
@@ -86,9 +86,12 @@ class LogFileMonitor(FileSystemEventHandler):
                                         continue
                                     channel_swap = {"player": "DM", "starsystem": "SYSTEM", "local": "LOCAL", "wing": "WING", "voicechat": "VC", "squadron": "SQUAD"}
                                     if channel in channel_swap.keys():
-                                        channel == channel_swap[channel]
-                                    formatted_message = f"{channel} {from_cmdr}: {message}"
-                                    send_to_discord(self.app.webhook_url.get(), formatted_message)
+                                        channel_name = channel_swap[channel]
+                                    else:
+                                        channel_name = "Unknown"
+                                    #payload = {"content": f"{channel} {from_cmdr}: {message}"}
+                                    payload = {"username": from_cmdr, "content": f"via {channel_name}: {message}"}
+                                    send_to_discord(self.app.webhook_url.get(), payload)
                         except json.JSONDecodeError as e:
                             print(f"Error parsing JSON: {e}")
         except Exception as e:
