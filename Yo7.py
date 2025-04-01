@@ -31,10 +31,10 @@ def find_latest_log_file(folder_path):
         print(f"Error finding latest log file: {e}")
     return None
 
-def send_to_discord(webhook_url, message):
+def send_to_discord(webhook_url, payload):
     if webhook_url:
         try:
-            requests.post(webhook_url, json={"content": message})
+            requests.post(webhook_url, json=payload)
         except Exception as e:
             print(f"Error sending to Discord: {e}")
 
@@ -84,20 +84,14 @@ class LogFileMonitor(FileSystemEventHandler):
                                     message = log_entry.get("Message", "Unknown")
                                     if from_cmdr.startswith("$") or message.startswith("$"):
                                         continue
-                                    if channel == "player":
-                                        channel = "DM"
-                                    if channel == "starsystem":
-                                        channel = "SYSTEM"
-                                    if channel == "local":
-                                        channel = "LOCAL"
-                                    if channel == "wing":
-                                        channel = "WING"
-                                    if channel == "voicechat":
-                                        channel = "VC"
-                                    if channel == "squadron":
-                                        channel = "SQUAD"
-                                    formatted_message = f"{channel} {from_cmdr}: {message}"
-                                    send_to_discord(self.app.webhook_url.get(), formatted_message)
+                                    channel_swap = {"player": "DM", "starsystem": "SYSTEM", "local": "LOCAL", "wing": "WING", "voicechat": "VC", "squadron": "SQUAD"}
+                                    if channel in channel_swap.keys():
+                                        channel_name = channel_swap[channel]
+                                    else:
+                                        channel_name = "Unknown"
+                                    #payload = {"content": f"{channel} {from_cmdr}: {message}"}
+                                    payload = {"username": from_cmdr, "content": f"via {channel_name}: {message}"}
+                                    send_to_discord(self.app.webhook_url.get(), payload)
                         except json.JSONDecodeError as e:
                             print(f"Error parsing JSON: {e}")
         except Exception as e:
@@ -123,6 +117,7 @@ class LogMonitorApp:
         tk.Button(root, text="Browse", command=self.browse_folder).pack()
         tk.Label(root, text="Discord Webhook URL:").pack()
         tk.Entry(root, textvariable=self.webhook_url, width=50).pack()
+        tk.Button(root, text="Send test/example message", command=lambda: self.test_webhook()).pack()
         tk.Button(root, text="Start Scan", command=self.start_scan).pack()
         tk.Button(root, text="Stop Scan", command=self.stop_scan).pack()
         self.status_label = tk.Label(root, text="Scanner Off", fg="red")
@@ -154,6 +149,16 @@ class LogMonitorApp:
         self.observer = Observer()
         self.observer.schedule(self.event_handler, path=self.folder_path.get(), recursive=False)
         self.observer.start()
+
+    def test_webhook(self):
+        webhook_url = self.webhook_url.get()
+        """Sends a test message to the webhook."""
+        if not webhook_url:
+            messagebox.showerror("Error", "Please enter a webhook URL!")
+            return
+        payload = {"username": "Just a test.", "content": f"via Yo7: Message contents go here."}
+        send_to_discord(webhook_url, payload)
+        messagebox.showinfo("Success", "Test message sent.")
     
     def set_latest_log_file(self, log_file):
         self.latest_log_file = log_file
