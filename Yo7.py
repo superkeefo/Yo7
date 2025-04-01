@@ -62,7 +62,6 @@ class LogFileMonitor(FileSystemEventHandler):
                 self.last_position = 0
                 self.process_new_lines()
 
-    channel_swap = {"player": "DM", "starsystem": "SYSTEM", "local": "LOCAL", "wing": "WING", "voicechat": "VC", "squadron": "SQUAD"}
     def process_new_lines(self):
         if not self.latest_log_file or not os.path.exists(self.latest_log_file) or not self.app.scanning:
             return
@@ -85,6 +84,7 @@ class LogFileMonitor(FileSystemEventHandler):
                                     message = log_entry.get("Message", "Unknown")
                                     if from_cmdr.startswith("$") or message.startswith("$"):
                                         continue
+                                    channel_swap = {"player": "DM", "starsystem": "SYSTEM", "local": "LOCAL", "wing": "WING", "voicechat": "VC", "squadron": "SQUAD"}
                                     if channel in channel_swap.keys():
                                         channel == channel_swap[channel]
                                     formatted_message = f"{channel} {from_cmdr}: {message}"
