@@ -9,7 +9,8 @@ so you dont accidentally ignore real people like you do npcs...
 
 You'll need a discord server so you can set up a webhook in a channel to receive the incoming chat.
 
-![Screenshot 2025-04-01 215006](https://github.com/user-attachments/assets/f34fd9a0-94d6-4c25-8cb4-a37e7b6bcf3e)
+
+![Screenshot 2025-04-02 162148](https://github.com/user-attachments/assets/fdf487d5-b348-4a1d-9d86-b3b9d1784af5)
 
 
 Truth be told i'm not a coder and 'vibe coded' this with ai.
