@@ -90,7 +90,7 @@ class LogFileMonitor(FileSystemEventHandler):
                                     else:
                                         channel_name = "Unknown"
                                     #payload = {"content": f"{channel} {from_cmdr}: {message}"}
-                                    payload = {"username": "Yo7", "content": f"{channel_name} {from_cmdr}: {message}"}
+                                    payload = {"username": "Yo7", "content": f"{channel_name}   {from_cmdr} :   {message}"}
                                     send_to_discord(self.app.webhook_url.get(), payload)
                         except json.JSONDecodeError as e:
                             print(f"Error parsing JSON: {e}")
