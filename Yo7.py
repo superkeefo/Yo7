@@ -136,6 +136,7 @@ class LogMonitorApp:
         self.start_timestamp = datetime.now(timezone.utc).isoformat()
         self.status_label.config(text="Scanner Running", fg="green")
         self.start_monitoring()
+        self.save_settings()
     
     def stop_scan(self):
         self.scanning = False
