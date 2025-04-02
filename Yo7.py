@@ -84,7 +84,7 @@ class LogFileMonitor(FileSystemEventHandler):
                                     message = log_entry.get("Message", "Unknown")
                                     if from_cmdr.startswith("$") or message.startswith("$"):
                                         continue
-                                    channel_swap = {"player": "'DM'", "starsystem": "`SYSTEM`", "local": "`LOCAL`", "wing": "`WING`", "voicechat": "`VC`", "squadron": "`SQUAD`"}
+                                    channel_swap = {"player": "`DM`", "starsystem": "`SYSTEM`", "local": "`LOCAL`", "wing": "`WING`", "voicechat": "`VC`", "squadron": "`SQUAD`"}
                                     if channel in channel_swap.keys():
                                         channel_name = channel_swap[channel]
                                     else:
