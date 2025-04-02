@@ -1,5 +1,9 @@
-# Yo7
-A simple tool that while running sends all cmdr chat to a discord webhook 
+
+![yo7](https://github.com/user-attachments/assets/4914726a-aa66-4717-83c6-a16ad064e403)
+
+#
+
+Yo7 is a simple tool for elite dangerous players that while running sends all cmdr chat to a discord webhook 
 allowing you to get discord notifications, 
 so you dont accidentally ignore real people like you do npcs...
 
