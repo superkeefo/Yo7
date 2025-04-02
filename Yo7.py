@@ -84,13 +84,13 @@ class LogFileMonitor(FileSystemEventHandler):
                                     message = log_entry.get("Message", "Unknown")
                                     if from_cmdr.startswith("$") or message.startswith("$"):
                                         continue
-                                    channel_swap = {"player": "DM", "starsystem": "SYSTEM", "local": "LOCAL", "wing": "WING", "voicechat": "VC", "squadron": "SQUAD"}
+                                    channel_swap = {"player": "'DM'", "starsystem": "`SYSTEM`", "local": "`LOCAL`", "wing": "`WING`", "voicechat": "`VC`", "squadron": "`SQUAD`"}
                                     if channel in channel_swap.keys():
                                         channel_name = channel_swap[channel]
                                     else:
                                         channel_name = "Unknown"
                                     #payload = {"content": f"{channel} {from_cmdr}: {message}"}
-                                    payload = {"username": from_cmdr, "content": f"via {channel_name}: {message}"}
+                                    payload = {"username": "Yo7", "content": f"{channel_name} {from_cmdr}: {message}"}
                                     send_to_discord(self.app.webhook_url.get(), payload)
                         except json.JSONDecodeError as e:
                             print(f"Error parsing JSON: {e}")
@@ -117,9 +117,9 @@ class LogMonitorApp:
         tk.Button(root, text="Browse", command=self.browse_folder).pack()
         tk.Label(root, text="Discord Webhook URL:").pack()
         tk.Entry(root, textvariable=self.webhook_url, width=50).pack()
-        tk.Button(root, text="Send test/example message", command=lambda: self.test_webhook()).pack()
-        tk.Button(root, text="Start Scan", command=self.start_scan).pack()
-        tk.Button(root, text="Stop Scan", command=self.stop_scan).pack()
+        tk.Button(root, text="Test Discord Webhook", command=lambda: self.test_webhook()).pack()
+        tk.Button(root, text="Start Scanning", command=self.start_scan).pack()
+        tk.Button(root, text="Stop Scanning", command=self.stop_scan).pack()
         self.status_label = tk.Label(root, text="Scanner Off", fg="red")
         self.status_label.pack()
     
@@ -156,7 +156,7 @@ class LogMonitorApp:
         if not webhook_url:
             messagebox.showerror("Error", "Please enter a webhook URL!")
             return
-        payload = {"username": "Just a test.", "content": f"via Yo7: Message contents go here."}
+        payload = {"username": "Yo7", "content": f"`TEST` seems to be working"}
         send_to_discord(webhook_url, payload)
         messagebox.showinfo("Success", "Test message sent.")
     
