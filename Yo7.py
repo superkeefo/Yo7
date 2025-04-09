@@ -3,171 +3,192 @@ import re
 import time
 import json
 import requests
-import tkinter as tk
-from tkinter import filedialog, messagebox
+import customtkinter as ctk
+from customtkinter import *
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from datetime import datetime, timezone
 
-CONFIG_FILE = "config.json"
 
-def load_config():
-    if os.path.exists(CONFIG_FILE):
-        with open(CONFIG_FILE, "r") as f:
-            return json.load(f)
-    return {}
+# Init variables
+prefs_ready = False  # CHECK: Set to false after testing
+config_file = os.path.join("settings", "config.json")
 
-def save_config(config_data):
-    with open(CONFIG_FILE, "w") as f:
-        json.dump(config_data, f, indent=4)
 
-def find_latest_log_file(folder_path):
-    try:
-        log_files = [f for f in os.listdir(folder_path) if re.match(r'(?i)journal\.\d{4}-\d{2}-\d{2}T\d{6}\.01\.log', f)]
-        if log_files:
-            latest_file = max(log_files, key=lambda f: re.search(r'\d{4}-\d{2}-\d{2}T\d{6}', f).group())
-            return os.path.join(folder_path, latest_file)
-    except Exception as e:
-        print(f"Error finding latest log file: {e}")
-    return None
+# GUI initial setup
+ctk.set_appearance_mode("dark")
+ctk.set_default_color_theme("green")
 
-def send_to_discord(webhook_url, payload):
-    if webhook_url:
-        try:
-            requests.post(webhook_url, json=payload)
-        except Exception as e:
-            print(f"Error sending to Discord: {e}")
 
-class LogFileMonitor(FileSystemEventHandler):
-    def __init__(self, folder_path, app):
-        self.folder_path = folder_path
-        self.app = app
-        self.latest_log_file = find_latest_log_file(self.folder_path)
-        self.app.set_latest_log_file(self.latest_log_file)
-        self.last_position = 0
-        self.process_new_lines()
+#Defining the preferences window
+def pref_window():
+    pref = ctk.CTkToplevel()
+    pref.grab_set()
+    pref.geometry("500x600")
+    pref.title("Preferences")
+    pref.after(200, lambda: pref.iconbitmap("Yo7.ico"))
+    pref.resizable(False, False)  
+
     
-    def on_modified(self, event):
-        if event.src_path == self.latest_log_file:
-            time.sleep(0.5)
-            self.process_new_lines()
-    
-    def on_created(self, event):
-        if event.src_path.startswith(self.folder_path):
-            time.sleep(0.5)
-            new_file = find_latest_log_file(self.folder_path)
-            if new_file != self.latest_log_file:
-                self.latest_log_file = new_file
-                self.app.set_latest_log_file(self.latest_log_file)
-                self.last_position = 0
-                self.process_new_lines()
+    #Defining grid for preference window
+    pref.grid_columnconfigure((0, 1), weight=1)
+    pref.grid_rowconfigure((0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12), weight=1)
 
-    def process_new_lines(self):
-        if not self.latest_log_file or not os.path.exists(self.latest_log_file) or not self.app.scanning:
-            return
-        try:
-            with open(self.latest_log_file, "r", encoding="utf-8") as f:
-                f.seek(self.last_position)
-                new_lines = f.readlines()
-                self.last_position = f.tell()
-                for line in new_lines:
-                    match = re.search(r'\{.*\}', line)
-                    if match:
-                        try:
-                            log_entry = json.loads(match.group())
-                            timestamp = log_entry.get("timestamp")
-                            if timestamp and self.app.start_timestamp and timestamp > self.app.start_timestamp:
-                                event = log_entry.get("event")
-                                if event in ("Receivetext", "ReceiveText"):
-                                    channel = log_entry.get("Channel", "Unknown")
-                                    from_cmdr = log_entry.get("From", "Unknown")
-                                    message = log_entry.get("Message", "Unknown")
-                                    if from_cmdr.startswith("$") or message.startswith("$"):
-                                        continue
-                                    channel_swap = {"player": "`DM`", "starsystem": "`SYSTEM`", "local": "`LOCAL`", "wing": "`WING`", "voicechat": "`VC`", "squadron": "`SQUAD`"}
-                                    if channel in channel_swap.keys():
-                                        channel_name = channel_swap[channel]
-                                    else:
-                                        channel_name = "Unknown"
-                                    #payload = {"content": f"{channel} {from_cmdr}: {message}"}
-                                    payload = {"username": "Yo7", "content": f"{channel_name}   {from_cmdr} :   {message}"}
-                                    send_to_discord(self.app.webhook_url.get(), payload)
-                        except json.JSONDecodeError as e:
-                            print(f"Error parsing JSON: {e}")
-        except Exception as e:
-            print(f"Error processing log file: {e}")
 
-class LogMonitorApp:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Yo7")
-        self.root.iconbitmap('Yo7.ico')
-        self.folder_path = tk.StringVar()
-        self.latest_log_file = None
-        self.event_handler = None
-        self.observer = None
-        self.scanning = False
-        self.start_timestamp = None
-        self.webhook_url = tk.StringVar()
-        config_data = load_config()
-        self.folder_path.set(config_data.get("folder_path", ""))
-        self.webhook_url.set(config_data.get("webhook_url", ""))
-        tk.Label(root, text="Select Log Folder:").pack()
-        tk.Entry(root, textvariable=self.folder_path, width=50).pack()
-        tk.Button(root, text="Browse", command=self.browse_folder).pack()
-        tk.Label(root, text="Discord Webhook URL:").pack()
-        tk.Entry(root, textvariable=self.webhook_url, width=50).pack()
-        tk.Button(root, text="Test Discord Webhook", command=lambda: self.test_webhook()).pack()
-        tk.Button(root, text="Start Scanning", command=self.start_scan).pack()
-        tk.Button(root, text="Stop Scanning", command=self.stop_scan).pack()
-        self.status_label = tk.Label(root, text="Scanner Off", fg="red")
-        self.status_label.pack()
-    
-    def browse_folder(self):
-        folder_selected = filedialog.askdirectory()
-        if folder_selected:
-            self.folder_path.set(folder_selected)
-            self.save_settings()
-    
-    def start_scan(self):
-        if not self.folder_path.get() or not self.webhook_url.get():
-            return
-        self.scanning = True
-        self.start_timestamp = datetime.now(timezone.utc).isoformat()
-        self.status_label.config(text="Scanner Running", fg="green")
-        self.start_monitoring()
-        self.save_settings()
-    
-    def stop_scan(self):
-        self.scanning = False
-        self.status_label.config(text="Scanner Off", fg="red")
-    
-    def start_monitoring(self):
-        if self.observer:
-            self.observer.stop()
-            self.observer.join()
-        self.event_handler = LogFileMonitor(self.folder_path.get(), self)
-        self.observer = Observer()
-        self.observer.schedule(self.event_handler, path=self.folder_path.get(), recursive=False)
-        self.observer.start()
+    #Defining preference window elements
+    log_entry= ctk.CTkEntry(master=pref, placeholder_text="enter elite dangerous log folder here", font=("Roboto", 15), width=300, height=30)
+    log_entry.grid(row=0, column=0, sticky="nw", padx=(20,0), pady=(20,0))
 
-    def test_webhook(self):
-        webhook_url = self.webhook_url.get()
-        """Sends a test message to the webhook."""
-        if not webhook_url:
-            messagebox.showerror("Error", "Please enter a webhook URL!")
-            return
-        payload = {"username": "Yo7", "content": f"`TEST` seems to be working"}
-        send_to_discord(webhook_url, payload)
-        messagebox.showinfo("Success", "Test message sent.")
-    
-    def set_latest_log_file(self, log_file):
-        self.latest_log_file = log_file
-    
-    def save_settings(self):
-        save_config({"folder_path": self.folder_path.get(), "webhook_url": self.webhook_url.get()})
 
+    browse_button = ctk.CTkButton(master=pref, text="browse", font=("Roboto", 15), text_color="Black", width= 220 , height=30)
+    browse_button.grid(row=0, column=1, sticky="ne", padx=(10,20), pady=(20,0))
+
+
+    #choice function to declare
+    def choice_func(choice_box):
+        if choice_box == "simple sound alert":
+            print("simple")
+            #include correct enable/disable configures
+        elif choice_box == "discord notification":
+            print("discord")
+            #include correct enable/disable configures
+        else:
+            print("windows")
+            #fix styling
+            volume_label.configure(text_color="#FF0000")
+            volume_slider.configure(button_color=("#FF0000","#FF0000"), progress_color=("#FF0000","#FF0000"), state="disabled", hover=False)
+            discord_entry.configure(state="disabled", placeholder_text_color="#FF0000")
+            discord_button.configure(state="disabled", text_color_disabled="#FF0000" , fg_color="#444444")
+            
+
+    #Choice for notification 
+    choice_label= ctk.CTkLabel(master=pref, text="Which kind of notification", text_color="#AAAAAA" , font=("Roboto", 15))
+    choice_label.grid(row=1, column=0, sticky="e", padx=(20,5), pady=(5,0))
+
+
+    choice_box = ctk.CTkOptionMenu(master=pref, values=["simple sound alert", "discord notification", "windows notification"], text_color="Black", font=("Roboto", 15), width=220, height=30, command=choice_func)
+    choice_box.grid(row=1, column=1, sticky="e", padx=(10,20), pady=(5,0))
+
+
+    #simple sound alert options 
+    def slider_value(value):
+        volume_label.configure(text="Volume " + str(int(value)) + "%")
+
+    
+    volume_slider= ctk.CTkSlider(master=pref, from_=0, to=100, width = 220, command=slider_value)
+    volume_slider.set(100) 
+    volume_slider.grid(row=2, column=1, sticky="e", padx=(10,20), pady=(5,0))
+
+
+    volume_label= ctk.CTkLabel(master=pref, text="Volume " + str(int(volume_slider.get())) +"%", text_color="#AAAAAA" , font=("Roboto", 15))
+    volume_label.grid(row=2, column=0, sticky="e", padx=(20,5), pady=(5,0))
+
+
+    #discord notification options
+    discord_entry= ctk.CTkEntry(master=pref, placeholder_text="paste discord webhook url here", font=("Roboto", 15), width=300, height=30)
+    discord_entry.grid(row=3, column=0, sticky="nw", padx=(20,0), pady=(20,0))
+
+
+    discord_button = ctk.CTkButton(master=pref, text="test webhook", font=("Roboto", 15), text_color="Black", width= 220 , height=30)
+    discord_button.grid(row=3, column=1, sticky="ne", padx=(10,20), pady=(20,0))
+
+
+    # windows notification options
+    # not sure there is any of these
+
+    # edchannel options
+    choice_label= ctk.CTkLabel(master=pref, text="Choose which channels to receive notifications from:", justify="center" , text_color="#AAAAAA" , font=("Roboto", 15))
+    choice_label.grid(row=5, column=0 , columnspan=2, sticky="nwe", padx=(20,20), pady=(20,0))
+
+
+    # edchannel options DM
+    dm_label= ctk.CTkLabel(master=pref, text="Direct messages", text_color="#AAAAAA" , font=("Roboto", 15))
+    dm_label.grid(row=6, column=0, sticky="e", padx=(20,5), pady=(5,0))
+    
+    dm_choice = ctk.StringVar(value="on")
+    dm_switch= ctk.CTkSwitch(master=pref, text=None , onvalue="on", offvalue="off", variable=dm_choice)
+    dm_switch.grid(row=6, column=1, sticky="nw", padx=(10,5) , pady=(15,0))
+
+    # edchannel options LOCAL
+    local_label= ctk.CTkLabel(master=pref, text="Local CMDR messages", text_color="#AAAAAA" , font=("Roboto", 15))
+    local_label.grid(row=7, column=0, sticky="e", padx=(20,5), pady=(5,0))
+    
+    local_choice = ctk.StringVar(value="on")
+    local_switch= ctk.CTkSwitch(master=pref, text=None , onvalue="on", offvalue="off", variable=local_choice)
+    local_switch.grid(row=7, column=1, sticky="nw", padx=(10,5) , pady=(15,0))
+
+    # edchannel options SYSTEM
+    system_label= ctk.CTkLabel(master=pref, text="System CMDR messages", text_color="#AAAAAA" , font=("Roboto", 15))
+    system_label.grid(row=8, column=0, sticky="e", padx=(20,5), pady=(5,0))
+    
+    system_choice = ctk.StringVar(value="on")
+    system_switch= ctk.CTkSwitch(master=pref, text=None , onvalue="on", offvalue="off", variable=system_choice)
+    system_switch.grid(row=8, column=1, sticky="nw", padx=(10,5) , pady=(15,0))
+
+    # edchannel options WING
+    wing_label= ctk.CTkLabel(master=pref, text="Wing messages", text_color="#AAAAAA" , font=("Roboto", 15))
+    wing_label.grid(row=9, column=0, sticky="e", padx=(20,5), pady=(5,0))
+    
+    wing_choice = ctk.StringVar(value="on")
+    wing_switch= ctk.CTkSwitch(master=pref, text=None , onvalue="on", offvalue="off", variable=wing_choice)
+    wing_switch.grid(row=9, column=1, sticky="nw", padx=(10,5) , pady=(15,0))
+
+    # edchannel options SQUAD
+    squad_label= ctk.CTkLabel(master=pref, text="Squad messages", text_color="#AAAAAA" , font=("Roboto", 15))
+    squad_label.grid(row=10, column=0, sticky="e", padx=(20,5), pady=(5,0))
+    
+    squad_choice = ctk.StringVar(value="on")
+    squad_switch= ctk.CTkSwitch(master=pref, text=None , onvalue="on", offvalue="off", variable=squad_choice)
+    squad_switch.grid(row=10, column=1, sticky="nw", padx=(10,5) , pady=(15,0))
+
+    # edchannel options VOICECHAT
+    vc_label= ctk.CTkLabel(master=pref, text="Voicechat messages", text_color="#AAAAAA" , font=("Roboto", 15))
+    vc_label.grid(row=11, column=0, sticky="e", padx=(20,5), pady=(5,0))
+    
+    vc_choice = ctk.StringVar(value="on")
+    vc_switch= ctk.CTkSwitch(master=pref, text=None , onvalue="on", offvalue="off", variable=vc_choice)
+    vc_switch.grid(row=11, column=1, sticky="nw", padx=(10,5) , pady=(15,0))
+
+
+
+    #close and save preferences
+    def save_config():
+        print(dm_choice.get(), int(volume_slider.get()), choice_box.get())
+        #pref.destroy() #need to check for correct settings, save settings, and update global variables
+
+
+    save_button = ctk.CTkButton(master=pref, text="save settings", font=("Roboto", 15), text_color="Black", height=30, command=save_config)
+    save_button.grid(row=12, column=0, columnspan=2 , sticky="sew", padx=(20,20), pady=(0,20))
+
+
+
+#Defining the main window
+root = ctk.CTk()
+root.geometry("300x110")
+root.title("Yo7")
+root.iconbitmap("Yo7.ico")
+root.resizable(False, False)
+
+
+#Denfining main window elements
+scan_label = ctk.CTkLabel(master=root, text="scanning inactive", font=("Roboto", 18)) 
+scan_label.pack( pady = (20,10))
+
+       
+scan_button = ctk.CTkButton(master=root, text="start scanning", height=30, font=("Roboto", 15), text_color="Black")
+scan_button.pack( fill = "x", expand=True , pady = 0, padx = (10,2) , side = 'left')
+
+
+pref_button = ctk.CTkButton(master=root, text="pr", width=30, height=30, font=("Roboto", 15), text_color="Black", command=pref_window)
+pref_button.pack( pady = 0, padx = (2,10) , side = 'right' )
+
+
+#Open preference window if prefs not set
+if prefs_ready is False:
+    root.after(1000, pref_window())
+
+
+#Running the main loop
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = LogMonitorApp(root)
     root.mainloop()
+
