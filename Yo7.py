@@ -43,22 +43,34 @@ def pref_window():
     browse_button = ctk.CTkButton(master=pref, text="browse", font=("Roboto", 15), text_color="Black", width= 220 , height=30)
     browse_button.grid(row=0, column=1, sticky="ne", padx=(10,20), pady=(20,0))
 
+    
 
     #choice function to declare
-    def choice_func(choice_box):
-        if choice_box == "simple sound alert":
+    def choice_func(choice_sel):
+        if choice_sel == "simple sound alert":
             print("simple")
-            #include correct enable/disable configures
-        elif choice_box == "discord notification":
+            #enable volume
+            volume_label.configure(text_color="#AAAAAA")
+            volume_slider.configure(button_color=("#444444","#444444"), progress_color=("#444444","#444444"), state="normal", hover=True)
+            #disable discord
+            discord_entry.configure(state="disabled", placeholder_text_color="#444444")
+            discord_button.configure(state="disabled", text_color_disabled="#444444" , fg_color="#444444")
+        elif choice_sel == "discord notification":
             print("discord")
-            #include correct enable/disable configures
+            #enable discord
+            discord_entry.configure(state="normal", placeholder_text_color="#444444")
+            discord_button.configure(state="normal", text_color_disabled="#444444" , fg_color="#444444")
+            #disable volume
+            volume_label.configure(text_color="#444444")
+            volume_slider.configure(button_color=("#444444","#444444"), progress_color=("#444444","#444444"), state="disabled", hover=False)
         else:
             print("windows")
-            #fix styling
-            volume_label.configure(text_color="#FF0000")
-            volume_slider.configure(button_color=("#FF0000","#FF0000"), progress_color=("#FF0000","#FF0000"), state="disabled", hover=False)
-            discord_entry.configure(state="disabled", placeholder_text_color="#FF0000")
-            discord_button.configure(state="disabled", text_color_disabled="#FF0000" , fg_color="#444444")
+            #disable volume
+            volume_label.configure(text_color="#444444")
+            volume_slider.configure(button_color=("#444444","#444444"), progress_color=("#444444","#444444"), state="disabled", hover=False)
+            #disable discord
+            discord_entry.configure(state="disabled", placeholder_text_color="#444444")
+            discord_button.configure(state="disabled", text_color_disabled="#444444" , fg_color="#444444")      
             
 
     #Choice for notification 
@@ -66,9 +78,11 @@ def pref_window():
     choice_label.grid(row=1, column=0, sticky="e", padx=(20,5), pady=(5,0))
 
 
-    choice_box = ctk.CTkOptionMenu(master=pref, values=["simple sound alert", "discord notification", "windows notification"], text_color="Black", font=("Roboto", 15), width=220, height=30, command=choice_func)
+    choice_box = ctk.CTkOptionMenu(master=pref, values=["simple sound alert", "discord notification", "windows notification"], 
+                                   text_color="Black", font=("Roboto", 15), width=220, height=30, 
+                                   #variable=choice_var, 
+                                   command=choice_func)
     choice_box.grid(row=1, column=1, sticky="e", padx=(10,20), pady=(5,0))
-
 
     #simple sound alert options 
     def slider_value(value):
@@ -149,7 +163,9 @@ def pref_window():
     vc_switch= ctk.CTkSwitch(master=pref, text=None , onvalue="on", offvalue="off", variable=vc_choice)
     vc_switch.grid(row=11, column=1, sticky="nw", padx=(10,5) , pady=(15,0))
 
-
+    #feed saved preferences in here
+    choice_func("discord notification")  
+    choice_box.set("discord notification")
 
     #close and save preferences
     def save_config():
