@@ -11,15 +11,30 @@ from datetime import datetime, timezone
 from PIL import Image
 
 
-# Init variables
+# Constants
+CONFIG_FILE = "config.json"
+
+# Global variables
 prefs_ready = False  # CHECK: Set to false after testing
-config_file = os.path.join("settings", "config.json")
+
+# Checks if settings exist
+if os.path.exists(CONFIG_FILE):
+    prefs_ready = True
+else:
+    prefs_ready = False
+
+# Save settings function
+def save_config(config):
+    with open(CONFIG_FILE, "w") as savefile:
+        json.dump(config, savefile, indent=4)
+
+
+
 
 
 # GUI initial setup
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("green")
-
 
 #Defining the preferences window
 def pref_window():
@@ -30,7 +45,7 @@ def pref_window():
     pref.after(200, lambda: pref.iconbitmap("Yo7.ico"))
     pref.resizable(False, False)
 
-#CHECK: add buttons to save or discard and make if loop for config saved
+#CHECK: reminds to save or lets discard - need to check prefs_ready on start scan
     def disable_close():
         savealert = CTkToplevel()
         savealert.grab_set()
@@ -186,19 +201,28 @@ def pref_window():
     vc_switch.grid(row=11, column=1, sticky="nw", padx=(10,5) , pady=(10,0))
 
 
-    #feed saved preferences from in here
-    choice_func()  
-    #choice_box.set("simple sound alert")
+    #lets the the choice fuction disable based on default value
+    choice_func()
+    
 
-    #close and save preferences
-    def save_config():
-        print(dm_choice.get(), int(volume_slider.get()), choice_box.get())
-        pref.destroy() #need to check for correct settings, save settings, and update global variables
+    #close preference and get current preferences for save function
+    def save_settings():
+        save = {"logfile_name" : log_entry.get(), 
+                "notif_type" : choice_box.get(),
+                "volume" : int(volume_slider.get()),
+                "webhook_url" : discord_entry.get(),
+                "DM" : dm_choice.get(),
+                "local" : local_choice.get(),
+                "system" : system_choice.get(),
+                "wing" : wing_choice.get(),
+                "squad" : squad_choice.get(),
+                "VC" : vc_choice.get()}
+        save_config(save)
+        pref.destroy()
 
-
-    save_button = ctk.CTkButton(master=pref, text="save settings", font=("Roboto", 15), text_color="Black", height=30, command=save_config)
+        
+    save_button = ctk.CTkButton(master=pref, text="save settings", font=("Roboto", 15), text_color="Black", height=30, command=save_settings)
     save_button.grid(row=12, column=0, columnspan=2 , sticky="sew", padx=(20,20), pady=(15,20))
-
 
 
 #Defining the main window
