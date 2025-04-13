@@ -106,11 +106,11 @@ def pref_window():
             volume_label.configure(text_color="#AAAAAA")
             volume_slider.configure(button_color=("#2CC985","#2FA572"), progress_color=("gray40","#AAB0B5"), state="normal", hover=True)
             #disable discord
-            discord_entry.configure(state="disabled", placeholder_text_color=disable_color, placeholder_text="paste discord webhook url here")
+            discord_entry.configure(state="disabled", text_color=disable_color, placeholder_text_color=disable_color, placeholder_text="paste discord webhook url here")
             discord_button.configure(state="disabled", text_color_disabled="gray10" , fg_color=disable_color)
         elif choice_sel == "discord notification":
             #enable discord
-            discord_entry.configure(state="normal", placeholder_text_color="gray52")
+            discord_entry.configure(state="normal", text_color="#DCE4EE" , placeholder_text_color="gray52")
             discord_button.configure(state="normal", fg_color="#2FA572")
             discord_button.focus_set()
             #disable volume
@@ -121,7 +121,7 @@ def pref_window():
             volume_label.configure(text_color=disable_color)
             volume_slider.configure(button_color=(disable_color,disable_color), progress_color=(disable_color,disable_color), state="disabled", hover=False)
             #disable discord
-            discord_entry.configure(state="disabled", placeholder_text_color=disable_color)
+            discord_entry.configure(state="disabled", text_color=disable_color, placeholder_text_color=disable_color)
             discord_button.configure(state="disabled", text_color_disabled=disable_color , fg_color=disable_color)      
             
 
@@ -225,7 +225,8 @@ def pref_window():
         log_entry.insert(0,config_pull.get("logfile_name"))
         volume_slider.set(config_pull.get("volume"))
         slider_value(config_pull.get("volume"))
-        discord_entry.insert(0,config_pull.get("webhook_url"))
+        if config_pull.get("webhook_url") != "":
+            discord_entry.insert(0,config_pull.get("webhook_url"))
         dm_choice.set(config_pull.get("DM"))
         local_choice.set(config_pull.get("local"))
         system_choice.set(config_pull.get("system"))
