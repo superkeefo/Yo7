@@ -17,11 +17,25 @@ CONFIG_FILE = "config.json"
 # Global variables
 prefs_ready = False  # CHECK: Set to false after testing
 
+
+# function for reading save file
+def load_config():
+    with open(CONFIG_FILE, "r") as pullfile:
+       return json.load(pullfile)
+
 # Checks if settings exist
 if os.path.exists(CONFIG_FILE):
     prefs_ready = True
+    # renaming to config_pull for clarity
 else:
     prefs_ready = False
+
+
+
+
+
+
+
 
 # Save settings function
 def save_config(config):
@@ -75,6 +89,7 @@ def pref_window():
 
 
     #Defining preference window elements
+     
     log_entry= ctk.CTkEntry(master=pref, placeholder_text="enter elite dangerous log folder here", font=("Roboto", 15), width=300, height=30)
     log_entry.grid(row=0, column=0, sticky="nw", padx=(20,0), pady=(20,0))
 
@@ -85,7 +100,7 @@ def pref_window():
     disable_color ="#444444"
 
     #choice function to declare
-    def choice_func(choice_sel="simple sound alert"):
+    def choice_func(choice_sel):
         if choice_sel == "simple sound alert":
             #enable volume
             volume_label.configure(text_color="#AAAAAA")
@@ -202,7 +217,23 @@ def pref_window():
 
 
     #lets the the choice fuction disable based on default value
-    choice_func()
+    if os.path.exists(CONFIG_FILE):
+        config_pull = load_config()
+        choice = config_pull.get("notif_type")
+        choice_func(choice)
+        choice_box.set(choice)
+        log_entry.insert(0,config_pull.get("logfile_name"))
+        volume_slider.set(config_pull.get("volume"))
+        slider_value(config_pull.get("volume"))
+        discord_entry.insert(0,config_pull.get("webhook_url"))
+        dm_choice.set(config_pull.get("DM"))
+        local_choice.set(config_pull.get("local"))
+        system_choice.set(config_pull.get("system"))
+        wing_choice.set(config_pull.get("wing"))
+        squad_choice.set(config_pull.get("squad"))
+        vc_choice.set(config_pull.get("VC"))
+    else:
+        choice_func("simple sound alert")
     
 
     #close preference and get current preferences for save function
