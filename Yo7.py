@@ -22,6 +22,7 @@ prefs_ready = False  # CHECK: Set to false after testing
 def load_config():
     with open(CONFIG_FILE, "r") as pullfile:
        return json.load(pullfile)
+    
 
 # Checks if settings exist
 if os.path.exists(CONFIG_FILE):
@@ -31,24 +32,16 @@ else:
     prefs_ready = False
 
 
-
-
-
-
-
-
 # Save settings function
 def save_config(config):
     with open(CONFIG_FILE, "w") as savefile:
         json.dump(config, savefile, indent=4)
 
 
-
-
-
 # GUI initial setup
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("green")
+
 
 #Defining the preferences window
 def pref_window():
@@ -58,6 +51,7 @@ def pref_window():
     pref.title("Preferences")
     pref.after(200, lambda: pref.iconbitmap("Yo7.ico"))
     pref.resizable(False, False)
+
 
 #CHECK: reminds to save or lets discard - need to check prefs_ready on start scan
     def disable_close():
@@ -82,20 +76,36 @@ def pref_window():
     pref.protocol("WM_DELETE_WINDOW", disable_close)  
 
     
-    
     #Defining grid for preference window
     pref.grid_columnconfigure((0, 1), weight=1)
     pref.grid_rowconfigure((0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12), weight=1)
 
 
     #Defining preference window elements
-     
+    #log_folder = ctk.StringVar() 
     log_entry= ctk.CTkEntry(master=pref, placeholder_text="enter elite dangerous log folder here", font=("Roboto", 15), width=300, height=30)
     log_entry.grid(row=0, column=0, sticky="nw", padx=(20,0), pady=(20,0))
 
 
-    browse_button = ctk.CTkButton(master=pref, text="browse", font=("Roboto", 15), text_color="Black", width= 220 , height=30)
+    #clears any previous saved text in log entry field
+    def clear():
+        log_entry.configure(state=NORMAL) 
+        log_entry.delete(0, END)
+        log_entry.configure(state=DISABLED)
+
+    #dialog window and insert new entry text
+    def browse_folder():
+        browsed = filedialog.askdirectory()
+        if browsed:
+            clear()
+            log_entry.configure(state=NORMAL) 
+            log_entry.insert(0, browsed)
+
+    
+    browse_button = ctk.CTkButton(master=pref, text="browse", font=("Roboto", 15), text_color="Black", width= 220 , height=30, command = browse_folder)
     browse_button.grid(row=0, column=1, sticky="ne", padx=(10,20), pady=(20,0))
+
+    #browse for log file
 
     disable_color ="#444444"
 
@@ -155,7 +165,14 @@ def pref_window():
     discord_entry.grid(row=3, column=0, sticky="nw", padx=(20,0), pady=(15,0))
 
 
-    discord_button = ctk.CTkButton(master=pref, text="test webhook", font=("Roboto", 15), text_color="Black", width= 220 , height=30)
+    def discord_test():
+        webhook = discord_entry.get()
+        print(webhook)
+        test_message = {"username": "Yo7", "content": f"`TEST` seems to be working"}
+        requests.post(webhook, json=test_message)
+        
+
+    discord_button = ctk.CTkButton(master=pref, text="test webhook", font=("Roboto", 15), text_color="Black", width= 220 , height=30, command=discord_test)
     discord_button.grid(row=3, column=1, sticky="ne", padx=(10,20), pady=(15,0))
 
 
@@ -251,6 +268,8 @@ def pref_window():
                 "VC" : vc_choice.get()}
         save_config(save)
         pref.destroy()
+
+    
 
         
     save_button = ctk.CTkButton(master=pref, text="save settings", font=("Roboto", 15), text_color="Black", height=30, command=save_settings)
