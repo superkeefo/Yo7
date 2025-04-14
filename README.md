@@ -31,7 +31,7 @@ You can also select which channels to receive messages from if you dont want to 
 <br/>
 <br/>
 <br/>  
-Originally coded as "vibecoding" excerise by me without a clue what I was doing in python,<br/>
+Originally coded as a "vibecoding" exercise by me without a clue what I was doing in python,<br/>
 ive since done a bit of a crash course and started learning python and rewrote essentially <br/> 
 all the code although I was definitely using the ai code as a reference.
 <br/>
