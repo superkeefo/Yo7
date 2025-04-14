@@ -3,3 +3,5 @@ config.json
 Yo7_previous.py
 todo.txt
 screenshots/
+dist/
+build/
