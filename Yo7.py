@@ -108,7 +108,7 @@ class LogWatcher(FileSystemEventHandler):
         global scanning
         if not self.latest_log or not os.path.exists(self.latest_log) or not scanning:
             return
-        with open(self.latest_log, "r") as current:
+        with open(self.latest_log, "r", encoding="utf-8") as current:
             current.seek(self.last_position)
             new_lines = current.readlines()
             self.last_position = current.tell()
