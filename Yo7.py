@@ -16,6 +16,10 @@ CONFIG_FILE = "config.json"
 
 # Global variables
 prefs_ready = False  # CHECK: Set to false after testing
+scanning = False
+observer = None
+start_timestamp = None
+latest_log = None
 
 
 # function for reading save file
@@ -38,6 +42,123 @@ def save_config(config):
         json.dump(config, savefile, indent=4)
 
 
+def find_latest_log():
+    config_pull = load_config()
+    folder_path = config_pull.get("logfile_name")
+    logs = [log for log in os.listdir(folder_path) if re.match(r'(?i)journal\.\d{4}-\d{2}-\d{2}T\d{6}\.01\.log', log)]
+    if logs:
+        latest_log = max(logs, key=lambda log: re.search(r'\d{4}-\d{2}-\d{2}T\d{6}', log).group())
+        return os.path.join(config_pull.get("logfile_name"), latest_log)
+    
+
+def scan_pressed():
+    global scanning
+    if prefs_ready == True and scanning == False:
+        start_scanning()
+        start_monitoring()
+    else:
+        stop_scanning()
+
+
+def start_scanning():
+    global scanning, start_timestamp
+    scanning = True
+    start_timestamp = datetime.now(timezone.utc).isoformat()
+    scan_label.configure(text= "scanning")
+    scan_button.configure(text= "stop scanning", hover_color="#BB0000")
+    print(start_timestamp)
+    print(scanning)
+    
+
+def stop_scanning():
+    global scanning
+    scanning = False
+    scan_label.configure(text= "scanner inactive")
+    scan_button.configure(text= "start scanning", hover_color="#106A43")
+
+
+class LogWatcher(FileSystemEventHandler):
+    def __init__(self):
+        self.config_pull = load_config()
+        self.folder = self.config_pull.get("logfile_name")
+        self.latest_log = find_latest_log()
+        self.set_latest_log(self.latest_log)
+        self.last_position = 0
+        self.new_lines()  
+
+    def on_modified(self, event):
+        if event.src_path == self.latest_log:
+            time.sleep(0.5)
+            self.new_lines()
+    
+    def on_created(self, event):
+        if event.src_path.startswith(self.folder):
+            time.sleep(0.5)
+            new_file= find_latest_log()
+            if new_file != self.latest_log:
+                self.latest_log = new_file
+                self.set_latest_log(self.latest_log)
+                self.last_position = 0
+                self.new_lines()
+
+    def set_latest_log(self, log_file):
+        self.latest_log = log_file
+
+    def new_lines(self):
+        global scanning
+        if not self.latest_log or not os.path.exists(self.latest_log) or not scanning:
+            return
+        with open(self.latest_log, "r") as current:
+            current.seek(self.last_position)
+            new_lines = current.readlines()
+            self.last_position = current.tell()
+            for line in new_lines:
+                match = re.search(r'\{.*\}', line)
+                if match:
+                    log = json.loads(match.group())
+                    timestamp = log.get("timestamp")
+                    if timestamp and start_timestamp and timestamp > start_timestamp:
+                        event = log.get("event")
+                        if event in ("Receivetext", "ReceiveText"):
+                            channel = log.get("Channel","Unknown")
+                            from_cmdr = log.get("From","Unknown")
+                            message = log.get("Message","Unknown")
+                            channel_swap = {"player": "`DM`", "starsystem": "`SYSTEM`", "local": "`LOCAL`",
+                                            "wing": "`WING`", "voicechat": "`VC`", "squadron": "`SQUAD`"}
+                            if from_cmdr.startswith("$") or message.startswith("$"):
+                                continue
+                            if channel in channel_swap.keys():
+                                channel_name = channel_swap[channel]
+                            else:
+                                channel_name = "Unknown"
+                            payload = {"username": "Yo7", "content": f"{channel_name}   {from_cmdr} :   {message}"}
+                            saved_status = load_config()
+                            notify_meth = saved_status.get("notif_type")
+                            for channels, status in saved_status.items():
+                                if status == "on" and notify_meth == "simple sound alert":
+                                    #simple sound alert action
+                                    print(f"{payload}\nSOUND ALERT!")
+                                elif status == "on" and notify_meth == "discord notification":
+                                    #discord alert action
+                                    print(f"{payload}\nDiscord!")
+                                elif status == "on" and notify_meth == "windows notification":
+                                    #windows alert action
+                                    print(f"{payload}\nWindows")
+                                else:
+                                    continue
+                                
+def start_monitoring():
+    global observer 
+    if observer:
+        observer.stop()
+        observer.join()
+    config_pull = load_config()
+    path = config_pull.get("logfile_name")
+    event_handler = LogWatcher()
+    observer = Observer()
+    observer.schedule(event_handler, path=path, recursive=False)
+    observer.start()
+
 # GUI initial setup
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("green")
@@ -45,6 +166,7 @@ ctk.set_default_color_theme("green")
 
 #Defining the preferences window
 def pref_window():
+    stop_scanning()
     pref = ctk.CTkToplevel()
     pref.grab_set()
     pref.geometry("500x550")
@@ -72,7 +194,7 @@ def pref_window():
         discard_btn.pack(side=LEFT, padx=(48,2))
         alert_save= ctk.CTkButton(master=savealert, width=150, text="oh right! whoops!", text_color="Black", font=("Roboto", 15), command=closealert)
         alert_save.pack(side=RIGHT, padx=(2,48))
-        pass
+        
     pref.protocol("WM_DELETE_WINDOW", disable_close)  
 
     
@@ -256,6 +378,7 @@ def pref_window():
 
     #close preference and get current preferences for save function
     def save_settings():
+        global prefs_ready
         save = {"logfile_name" : log_entry.get(), 
                 "notif_type" : choice_box.get(),
                 "volume" : int(volume_slider.get()),
@@ -267,8 +390,9 @@ def pref_window():
                 "squad" : squad_choice.get(),
                 "VC" : vc_choice.get()}
         save_config(save)
+        prefs_ready = True
         pref.destroy()
-
+        
     
 
         
@@ -285,11 +409,11 @@ root.resizable(False, False)
 
 
 #Denfining main window elements
-scan_label = ctk.CTkLabel(master=root, text="scanning inactive", font=("Roboto", 18)) 
+scan_label = ctk.CTkLabel(master=root, text="scanner inactive", font=("Roboto", 18)) 
 scan_label.pack( pady = (20,10))
 
        
-scan_button = ctk.CTkButton(master=root, text="start scanning", height=30, font=("Roboto", 15), text_color="Black")
+scan_button = ctk.CTkButton(master=root, text="start scanning", height=30, font=("Roboto", 15), text_color="Black", command=scan_pressed)
 scan_button.pack( fill = "x", expand=True , pady = 0, padx = (10,2) , side = 'left')
 
 button_image = ctk.CTkImage(Image.open("cogwheel.png"), size=(15,15))
@@ -300,7 +424,7 @@ pref_button.pack( pady = 0, padx = (2,10) , side = 'right' )
 
 #Open preference window if prefs not set
 if prefs_ready is False:
-    root.after(1000, pref_window())
+    root.after(750, pref_window)
 
 
 #Running the main loop
