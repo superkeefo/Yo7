@@ -3,12 +3,15 @@ import re
 import time
 import json
 import requests
+import pygame
 import customtkinter as ctk
 from customtkinter import *
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from datetime import datetime, timezone
 from PIL import Image
+from winotify import Notification, audio
+
 
 
 # Constants
@@ -66,8 +69,7 @@ def start_scanning():
     start_timestamp = datetime.now(timezone.utc).isoformat()
     scan_label.configure(text= "scanning")
     scan_button.configure(text= "stop scanning", hover_color="#BB0000")
-    print(start_timestamp)
-    print(scanning)
+
     
 
 def stop_scanning():
@@ -76,6 +78,37 @@ def stop_scanning():
     scan_label.configure(text= "scanner inactive")
     scan_button.configure(text= "start scanning", hover_color="#106A43")
 
+
+def send_toast(toastchannel, cmdr, message):
+    toast = Notification(app_id="Yo7",
+                         title=toastchannel,
+                         msg=f"{cmdr}: {message}")
+    toast.set_audio(audio.Mail, loop=False)
+    toast.show()
+    time.sleep(1)
+                        
+
+def send_discord(payload):
+    config_pull = load_config()
+    webhook = config_pull.get("webhook_url")
+    requests.post(webhook, json=payload)
+    time.sleep(1)
+    
+
+def send_alert():
+    pygame.init()
+    pygame.mixer.init(frequency=44100, size=-16, channels=1, buffer=512)
+    sound = "Yo7.wav"
+    config_pull = load_config()
+    pull_vol = config_pull.get("volume")
+    push_vol = round(float(pull_vol)/100,1)
+    my_sound = pygame.mixer.Sound(sound)
+    my_sound.set_volume(push_vol)
+    my_sound.play()
+    time.sleep(1)
+    pygame.mixer.quit()
+    pygame.quit() 
+    
 
 class LogWatcher(FileSystemEventHandler):
     def __init__(self):
@@ -123,29 +156,30 @@ class LogWatcher(FileSystemEventHandler):
                             channel = log.get("Channel","Unknown")
                             from_cmdr = log.get("From","Unknown")
                             message = log.get("Message","Unknown")
-                            channel_swap = {"player": "`DM`", "starsystem": "`SYSTEM`", "local": "`LOCAL`",
-                                            "wing": "`WING`", "voicechat": "`VC`", "squadron": "`SQUAD`"}
+                            channel_swap = {"player": "DM", "starsystem": "SYSTEM", "local": "LOCAL",
+                                            "wing": "WING", "voicechat": "VC", "squadron": "SQUAD"}
                             if from_cmdr.startswith("$") or message.startswith("$"):
                                 continue
                             if channel in channel_swap.keys():
                                 channel_name = channel_swap[channel]
                             else:
                                 channel_name = "Unknown"
-                            payload = {"username": "Yo7", "content": f"{channel_name}   {from_cmdr} :   {message}"}
+                            payload = {"username": "Yo7", "content": f"`{channel_name}`   {from_cmdr} :   {message}"}
                             saved_status = load_config()
                             notify_meth = saved_status.get("notif_type")
-                            for channels, status in saved_status.items():
-                                if status == "on" and notify_meth == "simple sound alert":
-                                    #simple sound alert action
-                                    print(f"{payload}\nSOUND ALERT!")
-                                elif status == "on" and notify_meth == "discord notification":
-                                    #discord alert action
-                                    print(f"{payload}\nDiscord!")
-                                elif status == "on" and notify_meth == "windows notification":
-                                    #windows alert action
-                                    print(f"{payload}\nWindows")
-                                else:
-                                    continue
+                            status = saved_status.get(channel_name)
+                    
+                            if status == "on" and notify_meth == "simple sound alert":
+                                #simple sound alert action
+                                send_alert()
+                            elif status == "on" and notify_meth == "discord notification":
+                                #discord alert action
+                                send_discord(payload)
+                            elif status == "on" and notify_meth == "windows notification":
+                                #windows alert action
+                                send_toast(channel_name, from_cmdr, message)
+                            else:
+                                continue
                                 
 def start_monitoring():
     global observer 
@@ -289,7 +323,6 @@ def pref_window():
 
     def discord_test():
         webhook = discord_entry.get()
-        print(webhook)
         test_message = {"username": "Yo7", "content": f"`TEST` seems to be working"}
         requests.post(webhook, json=test_message)
         
@@ -367,10 +400,10 @@ def pref_window():
         if config_pull.get("webhook_url") != "":
             discord_entry.insert(0,config_pull.get("webhook_url"))
         dm_choice.set(config_pull.get("DM"))
-        local_choice.set(config_pull.get("local"))
-        system_choice.set(config_pull.get("system"))
-        wing_choice.set(config_pull.get("wing"))
-        squad_choice.set(config_pull.get("squad"))
+        local_choice.set(config_pull.get("LOCAL"))
+        system_choice.set(config_pull.get("SYSTEM"))
+        wing_choice.set(config_pull.get("WING"))
+        squad_choice.set(config_pull.get("SQUAD"))
         vc_choice.set(config_pull.get("VC"))
     else:
         choice_func("simple sound alert")
@@ -384,10 +417,10 @@ def pref_window():
                 "volume" : int(volume_slider.get()),
                 "webhook_url" : discord_entry.get(),
                 "DM" : dm_choice.get(),
-                "local" : local_choice.get(),
-                "system" : system_choice.get(),
-                "wing" : wing_choice.get(),
-                "squad" : squad_choice.get(),
+                "LOCAL" : local_choice.get(),
+                "SYSTEM" : system_choice.get(),
+                "WING" : wing_choice.get(),
+                "SQUAD" : squad_choice.get(),
                 "VC" : vc_choice.get()}
         save_config(save)
         prefs_ready = True
