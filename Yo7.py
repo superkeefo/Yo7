@@ -272,7 +272,7 @@ def pref_window():
             volume_label.configure(text_color="#AAAAAA")
             volume_slider.configure(button_color=("#2CC985","#2FA572"), progress_color=("gray40","#AAB0B5"), state="normal", hover=True)
             #disable discord
-            discord_entry.configure(state="disabled", text_color=disable_color, placeholder_text_color=disable_color, placeholder_text="paste discord webhook url here")
+            discord_entry.configure(state="disabled", text_color=disable_color, placeholder_text_color=disable_color)
             discord_button.configure(state="disabled", text_color_disabled="gray10" , fg_color=disable_color)
         elif choice_sel == "discord notification":
             #enable discord
