@@ -267,13 +267,22 @@ def pref_window():
 
     #choice function to declare
     def choice_func(choice_sel):
+        webhook = config_pull.get("webhook_url")
         if choice_sel == "simple sound alert":
+
+            # need to revisit
+            if webhook.startswith("http"):
+                discord_entry.configure(state="normal", text_color=disable_color, placeholder_text_color=disable_color)
+                discord_button.configure(state="disabled", text_color_disabled="gray10" , fg_color=disable_color)
+            else:
+                discord_entry.configure(state="disabled", text_color=disable_color, placeholder_text_color=disable_color)
+                discord_button.configure(state="disabled", text_color_disabled="gray10" , fg_color=disable_color)
+
             #enable volume
             volume_label.configure(text_color="#AAAAAA")
             volume_slider.configure(button_color=("#2CC985","#2FA572"), progress_color=("gray40","#AAB0B5"), state="normal", hover=True)
             #disable discord
-            discord_entry.configure(state="disabled", text_color=disable_color, placeholder_text_color=disable_color)
-            discord_button.configure(state="disabled", text_color_disabled="gray10" , fg_color=disable_color)
+            
         elif choice_sel == "discord notification":
             #enable discord
             discord_entry.configure(state="normal", text_color="#DCE4EE" , placeholder_text_color="gray52")
@@ -283,12 +292,16 @@ def pref_window():
             volume_label.configure(text_color=disable_color)
             volume_slider.configure(button_color=(disable_color,disable_color), progress_color=(disable_color,disable_color), state="disabled", hover=False)
         else:
+            if webhook.startswith("http"):
+                discord_entry.configure(state="normal", text_color=disable_color, placeholder_text_color=disable_color)
+                discord_button.configure(state="disabled", text_color_disabled="gray10" , fg_color=disable_color)
+            else:
+                discord_entry.configure(state="disabled", text_color=disable_color, placeholder_text_color=disable_color)
+                discord_button.configure(state="disabled", text_color_disabled="gray10" , fg_color=disable_color)
             #disable volume
             volume_label.configure(text_color=disable_color)
             volume_slider.configure(button_color=(disable_color,disable_color), progress_color=(disable_color,disable_color), state="disabled", hover=False)
-            #disable discord
-            discord_entry.configure(state="disabled", text_color=disable_color, placeholder_text_color=disable_color)
-            discord_button.configure(state="disabled", text_color_disabled=disable_color , fg_color=disable_color)      
+            
             
 
     #Choice for notification 
