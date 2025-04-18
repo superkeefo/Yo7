@@ -17,7 +17,6 @@ whenever a cmdr chats, <br/> so you never miss another o7 while second screening
 
 You can choose from:
   - Simple sound alerts (with adjustable volume)
-  - Windows notifications
   - Discord notifications via a webhook (which will also send the message to the channel)
 
 <br/>
