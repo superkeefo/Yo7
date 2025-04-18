@@ -74,8 +74,7 @@ def scan_pressed():
         start_scanning()
         start_monitoring()
     else:
-        stop_scanning()
-        
+        stop_scanning()       
 
 
 def start_scanning():
@@ -99,19 +98,21 @@ def stop_scanning():
 def send_toast(toastchannel, cmdr, message):
     global last_toast_time
     current_time = time.time()
-    if current_time - last_toast_time < 1:
+    
+    if current_time - last_toast_time < 2:
         return
     toast = Notification(app_id="Yo7",
                          title=toastchannel,
-                         msg=f"{cmdr}: {message}")
-    toast.set_audio(audio.Mail, loop=False)
+                         msg=f"{cmdr}: {message}",
+                         duration="short")
     try:
+        toast.set_audio(audio.Mail, loop=False)
         toast.show()
         last_toast_time = current_time
         time.sleep(1)
     except Exception as e:
-        error(e)
-                        
+        error(e)                   
+
 
 def send_discord(payload):
     config_pull = load_config()
@@ -151,12 +152,12 @@ class LogWatcher(FileSystemEventHandler):
         self.latest_log = find_latest_log()
         self.set_latest_log(self.latest_log)
         self.last_position = 0
-        self.new_lines()  
+        self.process_new_lines()  
 
     def on_modified(self, event):
         if event.src_path == self.latest_log:
             time.sleep(0.5)
-            self.new_lines()
+            self.process_new_lines()
     
     def on_created(self, event):
         if event.src_path.startswith(self.folder):
@@ -166,12 +167,12 @@ class LogWatcher(FileSystemEventHandler):
                 self.latest_log = new_file
                 self.set_latest_log(self.latest_log)
                 self.last_position = 0
-                self.new_lines()
+                self.process_new_lines()
 
     def set_latest_log(self, log_file):
         self.latest_log = log_file
 
-    def new_lines(self):
+    def process_new_lines(self):
         global scanning
         if not self.latest_log or not os.path.exists(self.latest_log) or not scanning:
             return
