@@ -11,8 +11,6 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from datetime import datetime, timezone
 from PIL import Image
-from winotify import Notification, audio
-
 
 # Constants
 CONFIG_FILE = "config.json"
@@ -93,25 +91,6 @@ def stop_scanning():
         observer.join()
     scan_label.configure(text="scanner inactive")
     scan_button.configure(text="start scanning", hover_color="#106A43")
-
-
-def send_toast(toastchannel, cmdr, message):
-    global last_toast_time
-    current_time = time.time()
-    
-    if current_time - last_toast_time < 2:
-        return
-    toast = Notification(app_id="Yo7",
-                         title=toastchannel,
-                         msg=f"{cmdr}: {message}",
-                         duration="short")
-    try:
-        toast.set_audio(audio.Mail, loop=False)
-        toast.show()
-        last_toast_time = current_time
-        time.sleep(1)
-    except Exception as e:
-        error(e)                   
 
 
 def send_discord(payload):
@@ -210,10 +189,6 @@ class LogWatcher(FileSystemEventHandler):
                             elif status == "on" and notify_meth == "discord notification":
                                 #discord alert action
                                 send_discord(payload)
-                            elif status == "on" and notify_meth == "windows notification":
-                                #windows alert action
-                                send_toast(channel_name, from_cmdr, message)
-
                             else:
                                 continue
 
@@ -345,8 +320,7 @@ def pref_window():
     choice_label= ctk.CTkLabel(master=pref, text="Which kind of notification", text_color="#AAAAAA" , font=("Roboto", 15))
     choice_label.grid(row=1, column=0, sticky="e", padx=(20,5), pady=(15,0))
 
-
-    choice_box = ctk.CTkOptionMenu(master=pref, values=["simple sound alert", "discord notification", "windows notification"], 
+    choice_box = ctk.CTkOptionMenu(master=pref, values=["simple sound alert", "discord notification"], 
                                    text_color="Black", font=("Roboto", 15), width=220, height=30, command=choice_func)
     choice_box.grid(row=1, column=1, sticky="e", padx=(10,20), pady=(15,0))
 
