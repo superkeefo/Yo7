@@ -71,6 +71,8 @@ def scan_pressed():
     if prefs_ready == True and scanning == False:
         start_scanning()
         start_monitoring()
+    elif scanning == True:
+        stop_scanning()
     else:
         error("You haven't set the log file location, \nor there is an issue with the log location")  
 
