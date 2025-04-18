@@ -72,7 +72,7 @@ def scan_pressed():
         start_scanning()
         start_monitoring()
     else:
-        stop_scanning()       
+        error("You haven't set the log file location, \nor there is an issue with the log location")  
 
 
 def start_scanning():
@@ -277,11 +277,10 @@ def pref_window():
 
 
     def choice_func(choice_sel):
-        webhook = config_pull.get("webhook_url")
         if choice_sel == "simple sound alert":
         
             # disable discord if not saved
-            if webhook.startswith("http"):
+            if prefs_ready == True:
                 discord_entry.configure(state="normal", text_color=disable_color, placeholder_text_color=disable_color)
                 discord_button.configure(state="disabled", text_color_disabled="gray10" , fg_color=disable_color)
             else:
@@ -303,13 +302,13 @@ def pref_window():
             volume_slider.configure(button_color=(disable_color,disable_color), progress_color=(disable_color,disable_color), 
                                     state="disabled", hover=False)
         else:
-            # disable discord if not saved
-            if webhook.startswith("http"):
-                discord_entry.configure(state="normal", text_color=disable_color, placeholder_text_color=disable_color)
-                discord_button.configure(state="disabled", text_color_disabled="gray10" , fg_color=disable_color)
-            else:
-                discord_entry.configure(state="disabled", text_color=disable_color, placeholder_text_color=disable_color)
-                discord_button.configure(state="disabled", text_color_disabled="gray10" , fg_color=disable_color)
+            # # disable discord if not saved
+            # # if webhook.startswith("http"):
+            # #     discord_entry.configure(state="normal", text_color=disable_color, placeholder_text_color=disable_color)
+            # #     discord_button.configure(state="disabled", text_color_disabled="gray10" , fg_color=disable_color)
+            # else:
+            discord_entry.configure(state="disabled", text_color=disable_color, placeholder_text_color=disable_color)
+            discord_button.configure(state="disabled", text_color_disabled="gray10" , fg_color=disable_color)
             # disable volume
             volume_label.configure(text_color=disable_color)
             volume_slider.configure(button_color=(disable_color,disable_color), progress_color=(disable_color,disable_color), 
@@ -433,20 +432,23 @@ def pref_window():
     #close preference and get current preferences for save function
     def save_settings():
         global prefs_ready
-        save = {"logfile_name" : log_entry.get(), 
-                "notif_type" : choice_box.get(),
-                "volume" : int(volume_slider.get()),
-                "webhook_url" : discord_entry.get(),
-                "DM" : dm_choice.get(),
-                "LOCAL" : local_choice.get(),
-                "SYSTEM" : system_choice.get(),
-                "WING" : wing_choice.get(),
-                "SQUAD" : squad_choice.get(),
-                "VC" : vc_choice.get()}
-        save_config(save)
-        prefs_ready = True
-        pref.destroy()
-
+        test_log = log_entry.get()
+        if test_log.startswith("C:"):
+            save = {"logfile_name" : log_entry.get(), 
+                    "notif_type" : choice_box.get(),
+                    "volume" : int(volume_slider.get()),
+                    "webhook_url" : discord_entry.get(),
+                    "DM" : dm_choice.get(),
+                    "LOCAL" : local_choice.get(),
+                    "SYSTEM" : system_choice.get(),
+                    "WING" : wing_choice.get(),
+                    "SQUAD" : squad_choice.get(),
+                    "VC" : vc_choice.get()}
+            save_config(save)
+            prefs_ready = True
+            pref.destroy()
+        else:
+            error("You need to set the log file before saving!\nIt should start with drive C:")
         
     save_button = ctk.CTkButton(master=pref, text="save settings", font=("Roboto", 15), text_color="Black", height=30, command=save_settings)
     save_button.grid(row=12, column=0, columnspan=2 , sticky="sew", padx=(20,20), pady=(15,20))
