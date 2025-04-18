@@ -27,7 +27,6 @@ latest_log = None
 last_toast_time = 0
 
 
-
 # error box
 def error(e):
     messagebox.showerror("Error!", e)
@@ -285,6 +284,7 @@ def pref_window():
         log_entry.delete(0, END)
         log_entry.configure(state=DISABLED)
 
+
     #dialog window and insert new entry text
     def browse_folder():
         browsed = filedialog.askdirectory()
@@ -338,7 +338,6 @@ def pref_window():
             volume_label.configure(text_color=disable_color)
             volume_slider.configure(button_color=(disable_color,disable_color), progress_color=(disable_color,disable_color), 
                                     state="disabled", hover=False)
-            
             
 
     #Choice for notification 
@@ -489,7 +488,6 @@ root.resizable(False, False)
 #Denfining main window elements
 scan_label = ctk.CTkLabel(master=root, text="scanner inactive", font=("Roboto", 18)) 
 scan_label.pack( pady = (20,10))
-
        
 scan_button = ctk.CTkButton(master=root, text="start scanning", height=30, font=("Roboto", 15), text_color="Black", command=scan_pressed)
 scan_button.pack( fill = "x", expand=True , pady = 0, padx = (10,2) , side = 'left')
