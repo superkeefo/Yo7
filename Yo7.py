@@ -6,6 +6,7 @@ import requests
 import pygame
 import customtkinter as ctk
 from customtkinter import *
+from tkinter import messagebox
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from datetime import datetime, timezone
@@ -13,28 +14,42 @@ from PIL import Image
 from winotify import Notification, audio
 
 
-
 # Constants
 CONFIG_FILE = "config.json"
 
+
 # Global variables
-prefs_ready = False  # CHECK: Set to false after testing
+prefs_ready = False  
 scanning = False
 observer = None
 start_timestamp = None
 latest_log = None
+last_toast_time = 0
+
+
+
+# error box
+def error(e):
+    messagebox.showerror("Error!", e)
 
 
 # function for reading save file
 def load_config():
-    with open(CONFIG_FILE, "r") as pullfile:
-       return json.load(pullfile)
+    if os.path.exists(CONFIG_FILE):
+        try:
+            with open(CONFIG_FILE, "r") as pullfile:
+                return json.load(pullfile)
+        except FileNotFoundError:
+            error("config.json file doesnt exist")
+        except json.JSONDecodeError:
+            error("file format issuer \n(json decode error)")
+    else:
+        error("config file doesnt exist")
     
 
 # Checks if settings exist
 if os.path.exists(CONFIG_FILE):
     prefs_ready = True
-    # renaming to config_pull for clarity
 else:
     prefs_ready = False
 
@@ -61,39 +76,56 @@ def scan_pressed():
         start_monitoring()
     else:
         stop_scanning()
+        
 
 
 def start_scanning():
     global scanning, start_timestamp
     scanning = True
     start_timestamp = datetime.now(timezone.utc).isoformat()
-    scan_label.configure(text= "scanning")
-    scan_button.configure(text= "stop scanning", hover_color="#BB0000")
+    scan_label.configure(text="scanning")
+    scan_button.configure(text="stop scanning", hover_color="#BB0000")
 
-    
 
 def stop_scanning():
-    global scanning
+    global scanning, observer
     scanning = False
-    scan_label.configure(text= "scanner inactive")
-    scan_button.configure(text= "start scanning", hover_color="#106A43")
+    if observer:
+        observer.stop()
+        observer.join()
+    scan_label.configure(text="scanner inactive")
+    scan_button.configure(text="start scanning", hover_color="#106A43")
 
 
 def send_toast(toastchannel, cmdr, message):
+    global last_toast_time
+    current_time = time.time()
+    if current_time - last_toast_time < 1:
+        return
     toast = Notification(app_id="Yo7",
                          title=toastchannel,
                          msg=f"{cmdr}: {message}")
     toast.set_audio(audio.Mail, loop=False)
-    toast.show()
-    time.sleep(1)
+    try:
+        toast.show()
+        last_toast_time = current_time
+        time.sleep(1)
+    except Exception as e:
+        error(e)
                         
 
 def send_discord(payload):
     config_pull = load_config()
     webhook = config_pull.get("webhook_url")
-    requests.post(webhook, json=payload)
-    time.sleep(1)
-    
+    try:
+        response = requests.post(webhook, json=payload)
+        response.raise_for_status()
+        time.sleep(1)
+    except requests.exceptions.HTTPError as e:
+        error(e)
+    except requests.exceptions.RequestException as e:
+        error(e)
+
 
 def send_alert():
     pygame.init()
@@ -103,8 +135,11 @@ def send_alert():
     pull_vol = config_pull.get("volume")
     push_vol = round(float(pull_vol)/100,1)
     my_sound = pygame.mixer.Sound(sound)
-    my_sound.set_volume(push_vol)
-    my_sound.play()
+    try:
+        my_sound.set_volume(push_vol)
+        my_sound.play()
+    except Exception as e:
+        error(e)
     time.sleep(1)
     pygame.mixer.quit()
     pygame.quit() 
@@ -178,9 +213,11 @@ class LogWatcher(FileSystemEventHandler):
                             elif status == "on" and notify_meth == "windows notification":
                                 #windows alert action
                                 send_toast(channel_name, from_cmdr, message)
+
                             else:
                                 continue
-                                
+
+
 def start_monitoring():
     global observer 
     if observer:
@@ -192,6 +229,7 @@ def start_monitoring():
     observer = Observer()
     observer.schedule(event_handler, path=path, recursive=False)
     observer.start()
+
 
 # GUI initial setup
 ctk.set_appearance_mode("dark")
@@ -209,7 +247,6 @@ def pref_window():
     pref.resizable(False, False)
 
 
-#CHECK: reminds to save or lets discard - need to check prefs_ready on start scan
     def disable_close():
         savealert = CTkToplevel()
         savealert.grab_set()
@@ -238,7 +275,6 @@ def pref_window():
 
 
     #Defining preference window elements
-    #log_folder = ctk.StringVar() 
     log_entry= ctk.CTkEntry(master=pref, placeholder_text="enter elite dangerous log folder here", font=("Roboto", 15), width=300, height=30)
     log_entry.grid(row=0, column=0, sticky="nw", padx=(20,0), pady=(20,0))
 
@@ -261,16 +297,14 @@ def pref_window():
     browse_button = ctk.CTkButton(master=pref, text="browse", font=("Roboto", 15), text_color="Black", width= 220 , height=30, command = browse_folder)
     browse_button.grid(row=0, column=1, sticky="ne", padx=(10,20), pady=(20,0))
 
-    #browse for log file
-
     disable_color ="#444444"
 
-    #choice function to declare
+
     def choice_func(choice_sel):
         webhook = config_pull.get("webhook_url")
         if choice_sel == "simple sound alert":
-
-            # need to revisit
+        
+            # disable discord if not saved
             if webhook.startswith("http"):
                 discord_entry.configure(state="normal", text_color=disable_color, placeholder_text_color=disable_color)
                 discord_button.configure(state="disabled", text_color_disabled="gray10" , fg_color=disable_color)
@@ -278,29 +312,32 @@ def pref_window():
                 discord_entry.configure(state="disabled", text_color=disable_color, placeholder_text_color=disable_color)
                 discord_button.configure(state="disabled", text_color_disabled="gray10" , fg_color=disable_color)
 
-            #enable volume
+            # enable volume
             volume_label.configure(text_color="#AAAAAA")
             volume_slider.configure(button_color=("#2CC985","#2FA572"), progress_color=("gray40","#AAB0B5"), state="normal", hover=True)
-            #disable discord
+            
             
         elif choice_sel == "discord notification":
-            #enable discord
+            # enable discord
             discord_entry.configure(state="normal", text_color="#DCE4EE" , placeholder_text_color="gray52")
             discord_button.configure(state="normal", fg_color="#2FA572")
             discord_button.focus_set()
-            #disable volume
+            # disable volume
             volume_label.configure(text_color=disable_color)
-            volume_slider.configure(button_color=(disable_color,disable_color), progress_color=(disable_color,disable_color), state="disabled", hover=False)
+            volume_slider.configure(button_color=(disable_color,disable_color), progress_color=(disable_color,disable_color), 
+                                    state="disabled", hover=False)
         else:
+            # disable discord if not saved
             if webhook.startswith("http"):
                 discord_entry.configure(state="normal", text_color=disable_color, placeholder_text_color=disable_color)
                 discord_button.configure(state="disabled", text_color_disabled="gray10" , fg_color=disable_color)
             else:
                 discord_entry.configure(state="disabled", text_color=disable_color, placeholder_text_color=disable_color)
                 discord_button.configure(state="disabled", text_color_disabled="gray10" , fg_color=disable_color)
-            #disable volume
+            # disable volume
             volume_label.configure(text_color=disable_color)
-            volume_slider.configure(button_color=(disable_color,disable_color), progress_color=(disable_color,disable_color), state="disabled", hover=False)
+            volume_slider.configure(button_color=(disable_color,disable_color), progress_color=(disable_color,disable_color), 
+                                    state="disabled", hover=False)
             
             
 
@@ -310,10 +347,9 @@ def pref_window():
 
 
     choice_box = ctk.CTkOptionMenu(master=pref, values=["simple sound alert", "discord notification", "windows notification"], 
-                                   text_color="Black", font=("Roboto", 15), width=220, height=30, 
-                                   #variable=choice_var, 
-                                   command=choice_func)
+                                   text_color="Black", font=("Roboto", 15), width=220, height=30, command=choice_func)
     choice_box.grid(row=1, column=1, sticky="e", padx=(10,20), pady=(15,0))
+
 
     #simple sound alert options 
     def slider_value(value):
@@ -340,12 +376,10 @@ def pref_window():
         requests.post(webhook, json=test_message)
         
 
-    discord_button = ctk.CTkButton(master=pref, text="test webhook", font=("Roboto", 15), text_color="Black", width= 220 , height=30, command=discord_test)
+    discord_button = ctk.CTkButton(master=pref, text="test webhook", font=("Roboto", 15), text_color="Black", 
+                                   width=220 , height=30, command=discord_test)
     discord_button.grid(row=3, column=1, sticky="ne", padx=(10,20), pady=(15,0))
 
-
-    # windows notification options
-    # not sure there is any of these
 
     # edchannel options
     choice_label= ctk.CTkLabel(master=pref, text="Choose which channels to receive notifications from:", justify="center" , text_color="#AAAAAA" , font=("Roboto", 15))
@@ -438,8 +472,6 @@ def pref_window():
         save_config(save)
         prefs_ready = True
         pref.destroy()
-        
-    
 
         
     save_button = ctk.CTkButton(master=pref, text="save settings", font=("Roboto", 15), text_color="Black", height=30, command=save_settings)
